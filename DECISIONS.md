@@ -379,3 +379,4 @@ Although this would have made the application more interactive, it would also ha
 
 I decided not to implement it because the selected feature was the daily schedule view, and adding booking creation would have expanded the scope beyond what was necessary.
 
+I believe rejecting this suggestion was the right decision because it allowed me to complete and test the selected feature within the available time instead of delivering a partially implemented booking management workflow.
