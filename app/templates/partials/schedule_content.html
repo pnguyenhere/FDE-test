@@ -1,0 +1,156 @@
+
+{% set lessons = schedule.lessons %}
+{% set booked_count = lessons | selectattr("status", "equalto", "booked") | list | length %}
+{% set cancelled_count = lessons | selectattr("status", "equalto", "cancelled") | list | length %}
+{% set no_show_count = lessons | selectattr("status", "equalto", "no_show") | list | length %}
+{% set warning_count = lessons | selectattr("warnings") | list | length %}
+
+<div class="row g-3 mb-4">
+
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Total lessons</p>
+                <h3 class="fw-bold mb-0">{{ schedule.total_lessons }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Booked</p>
+                <h3 class="fw-bold text-success mb-0">{{ booked_count }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Cancelled / No-show</p>
+                <h3 class="fw-bold text-secondary mb-0">
+                    {{ cancelled_count + no_show_count }}
+                </h3>
+                <small class="text-muted">
+                    {{ cancelled_count }} cancelled · {{ no_show_count }} no-show
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6 col-lg-3">
+        <div class="card summary-card h-100">
+            <div class="card-body">
+                <p class="text-muted mb-1">Lessons with warnings</p>
+                <h3 class="fw-bold {% if warning_count > 0 %}text-danger{% else %}text-success{% endif %} mb-0">
+                    {{ warning_count }}
+                </h3>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card">
+    <div class="card-header bg-white py-3">
+        <h5 class="fw-bold mb-0">Lesson schedule</h5>
+        <small class="text-muted">
+            {{ schedule.date }}
+        </small>
+    </div>
+
+    <div class="card-body p-0">
+
+        {% if lessons %}
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Time</th>
+                        <th>Student</th>
+                        <th>Tutor</th>
+                        <th>Subject</th>
+                        <th>Room</th>
+                        <th>Status</th>
+                        <th>Warnings</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for lesson in lessons %}
+                    <tr>
+                        <td class="text-nowrap">
+                            <div class="fw-semibold">
+                                {{ lesson.start_time }} – {{ lesson.end_time }}
+                            </div>
+                            <small class="text-muted">
+                                {{ lesson.duration_min }} min
+                            </small>
+                        </td>
+
+                        <td>
+                            <div class="fw-semibold">
+                                {{ lesson.student_name }}
+                            </div>
+                            <small class="text-muted">
+                                {{ lesson.lesson_id }}
+                            </small>
+                        </td>
+
+                        <td>{{ lesson.tutor_name }}</td>
+
+                        <td>{{ lesson.subject }}</td>
+
+                        <td>{{ lesson.room }}</td>
+
+                        <td>
+                            {% if lesson.status == "booked" %}
+                                <span class="badge bg-success-subtle text-success">
+                                    Booked
+                                </span>
+                            {% elif lesson.status == "cancelled" %}
+                                <span class="badge bg-secondary-subtle text-secondary">
+                                    Cancelled
+                                </span>
+                            {% elif lesson.status == "no_show" %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis">
+                                    No-show
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if lesson.warnings %}
+                                {% for warning in lesson.warnings %}
+                                    <div class="text-danger small mb-1">
+                                        <span class="fw-semibold">!</span>
+                                        {{ warning }}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% else %}
+
+        <div class="text-center py-5">
+            <h5 class="text-muted">No lessons scheduled</h5>
+            <p class="text-muted mb-0">
+                There are no lessons recorded for this date.
+            </p>
+        </div>
+
+        {% endif %}
+
+    </div>
+</div>

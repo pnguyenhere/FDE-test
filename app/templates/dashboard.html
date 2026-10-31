@@ -1,0 +1,39 @@
+
+{% extends "base.html" %}
+
+{% block title %}Daily Schedule | Bright Path{% endblock %}
+
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h2 class="fw-bold mb-1">Daily Schedule</h2>
+        <p class="text-muted mb-0">
+            View lessons, tutors, rooms, and scheduling warnings.
+        </p>
+    </div>
+
+    <div>
+        <label for="schedule-date" class="form-label fw-semibold">
+            Select date
+        </label>
+
+        <input
+            type="date"
+            id="schedule-date"
+            name="target_date"
+            class="form-control"
+            value="{{ selected_date }}"
+            hx-get="/dashboard/schedule"
+            hx-trigger="change"
+            hx-target="#schedule-content"
+            hx-swap="innerHTML"
+        >
+    </div>
+</div>
+
+<div id="schedule-content">
+    {% include "partials/schedule_content.html" %}
+</div>
+
+{% endblock %}
