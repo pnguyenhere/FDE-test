@@ -74,6 +74,7 @@
                         <th>Subject</th>
                         <th>Room</th>
                         <th>Status</th>
+                        <th>Note</th>
                         <th>Warnings</th>
                     </tr>
                 </thead>
@@ -120,6 +121,8 @@
                                 </span>
                             {% endif %}
                         </td>
+
+                        <td>{{ "" if lesson.note == "None" or lesson.note == None else lesson.note }}</td>
 
                         <td>
                             {% if lesson.warnings %}

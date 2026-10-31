@@ -52,7 +52,14 @@ def get_daily_schedule(db, target_date):
             if not overlap:
                 continue
 
-            if first["tutor_id"] == second["tutor_id"]:
+            is_exam_pair = (
+                first["tutor_id"] == second["tutor_id"]
+                and first["room"] == second["room"]
+                and first["note"] == "exam pair - half price"
+                and second["note"] == "exam pair - half price"
+            )
+
+            if first["tutor_id"] == second["tutor_id"] and not is_exam_pair:
                 first["warnings"].append(
                     f"Tutor conflict with {second['lesson_id']}"
                 )
@@ -68,13 +75,17 @@ def get_daily_schedule(db, target_date):
                     f"Student conflict with {first['lesson_id']}"
                 )
 
-            if first["room"] == second["room"]:
+            if first["room"] == second["room"] and not is_exam_pair:
                 first["warnings"].append(
                     f"Room conflict with {second['lesson_id']}"
                 )
                 second["warnings"].append(
                     f"Room conflict with {first['lesson_id']}"
                 )
+
+            if is_exam_pair:
+                first["note"] = f"Exam pair with {second["student_name"]} - {second["lesson_id"]}, half price"
+                second["note"] = f"Exam pair with {first["student_name"]} - {first["lesson_id"]}, half price"
 
     # Remove internal datetime fields before returning the response.
     for lesson in lessons:
