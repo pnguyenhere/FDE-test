@@ -330,3 +330,52 @@ For L009 and L010, the dashboard also noted that these students are part of an e
 The date picker was also tested to verify that changing the selected date updated the schedule content without reloading the entire page.
 
 The implementation therefore demonstrates the selected feature using the existing dataset while preserving the distinction between current booking information and historical events.
+
+
+# Phase 4: Reflect
+
+## 1. What I would build next with another week
+
+If I had another week, I would prioritize two additional features:
+
+**Booking Management**
+
+I would implement the ability to create, update, move, and cancel lessons. This would allow the centre owner to manage bookings directly instead of only viewing the existing schedule. I would also record every change in `LessonEvent` to preserve the booking history, including cases where a tutor has already been notified before a lesson is moved or cancelled.
+
+**Schedule Validation**
+
+I would implement validation rules to prevent invalid bookings when creating or modifying lessons. These would include:
+- Preventing tutor, student, and room scheduling conflicts.
+- Enforcing the maximum of six bookings per tutor per day.
+- Preventing bookings on closed days unless authorized by the owner.
+- Applying the cancellation notice policy.
+
+I would prioritize these features because they build naturally on the existing data model and daily schedule functionality. Together, they would turn the application from a read-only dashboard into a more complete scheduling management system.
+
+## 2. What I Know Is Weak
+
+The current implementation has several limitations:
+
+- **Limited scheduling validation:** The application detects overlapping lessons but does not prevent invalid bookings because booking management was outside the selected scope.
+- **No booking modification interface:** Users cannot create, move, or cancel lessons through the dashboard.
+- **Historical data limitations:** The original export does not contain complete modification history or information about who performed each change. This information cannot be reconstructed reliably from the existing records.
+
+## 3. Where AI Assistance Helped
+
+I used an AI assistant throughout the implementation process, particularly for:
+- Discussing the data model and how to represent booking changes and event history.
+- Reviewing database constraints and deciding which scheduling rules belong in the database versus application code.
+- Structuring the FastAPI application into models, repositories, services, and API routes.
+- Implementing the dashboard using Jinja2, Bootstrap 5, and HTMX.
+- Troubleshooting implementation issues and reviewing SQL and Python code.
+
+However, I still needed to review the suggestions against the assignment requirements, understand the generated code, and test the actual application. AI assistance accelerated implementation, but the final design decisions and verification remained my responsibility.
+
+## 4. One Suggestion I Rejected and Why
+
+One suggestion I rejected was implementing a `POST /api/lessons` endpoint for creating bookings.
+
+Although this would have made the application more interactive, it would also have required additional functionality for booking validation, tutor availability, room availability, cancellation policies, and booking history.
+
+I decided not to implement it because the selected feature was the daily schedule view, and adding booking creation would have expanded the scope beyond what was necessary.
+
