@@ -40,7 +40,7 @@ def dashboard(
     db: Session = Depends(get_db),
 ):
     # Automatically use today's date if none is provided.
-    selected_date = target_date or date.today()
+    selected_date = target_date or date(2026, 3, 4)
 
     schedule = get_daily_schedule(db, selected_date)
 
