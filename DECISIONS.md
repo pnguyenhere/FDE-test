@@ -47,3 +47,45 @@ A few aspects of the brief do not fully specify how the business operates:
 - The spreadsheet does not contain modification history or the identity of the person making changes. This information cannot be reliably reconstructed from the existing export.
 
 These assumptions will guide the initial implementation. Where the available data is insufficient to determine what actually happened, the system should flag the record for review rather than silently infer or change its meaning.
+
+# Phase 2: Choose what to build
+
+## 1. Candidate Features
+
+1. **Daily Schedule View:** Display lessons by date, time, tutor, student, room, and status.
+2. **Booking Management:** Create, update, and cancel lesson bookings.
+3. **Schedule Validation:** Identify tutor conflicts, room conflicts, closed-day bookings, and tutor workload violations.
+4. **Cancellation Management:** Handle free cancellations, late cancellations, and no-shows.
+5. **Schedule Change History:** Track previous booking values, timestamps, and responsible users.
+6. **Spreadsheet Import:** Import existing records and identify duplicates, missing information, and inconsistent data.
+
+## 2. Selected Feature: Daily Schedule View
+
+I would prioritize the Daily Schedule View because it directly addresses the owner's most explicit request: being able to open the laptop and immediately see today's schedule without navigating through a spreadsheet.
+
+The initial implementation will include:
+
+- Display lessons for a selected date, defaulting to today.
+- Show lesson time, duration, student, tutor, subject, and room.
+- Display booking statuses, including booked, cancelled, and no-show.
+- Organize lessons chronologically.
+- Highlight potential scheduling conflicts and business rule violations.
+
+The dashboard will be read-only. It will provide visibility into the existing schedule without attempting to replace the complete booking workflow.
+
+## 3. Why This Feature?
+
+- **Immediate business value:** The owner and receptionist can quickly understand the day's schedule.
+- **Small implementation scope:** The existing spreadsheet already contains most of the information needed.
+- **Reduced operational overhead:** Users no longer need to manually inspect multiple spreadsheet rows.
+- **Future extensibility:** The structured data and API can later support booking management, cancellation workflows, and schedule validation.
+
+## 4. What I Am Choosing to Leave Broken
+
+- Mai can still create conflicting bookings through the existing spreadsheet.
+- Tutor workload limits are not enforced when creating bookings.
+- Cancellation and no-show workflows remain manual.
+- Schedule modifications and post-cutoff approvals are not implemented.
+- Historical inconsistencies are highlighted but not automatically corrected.
+- WhatsApp messages are not synchronized with the dashboard.
+- Full booking audit history is not available.
