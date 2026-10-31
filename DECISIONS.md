@@ -89,3 +89,244 @@ The dashboard will be read-only. It will provide visibility into the existing sc
 - Historical inconsistencies are highlighted but not automatically corrected.
 - WhatsApp messages are not synchronized with the dashboard.
 - Full booking audit history is not available.
+
+# Phase 3: Design and build
+
+## 1. Implemented functionality
+
+- Display lessons for a selected date in chronological order.
+- Default to 2026-03-04 when the dashboard is opened.
+- Allow the user to change the date without reloading the entire page.
+- Display lesson details, including calculated end time.
+- Distinguish between booked, cancelled, and no-show lessons.
+- Identify overlapping tutor, student, and room bookings.
+- Display summary counts for total lessons, booked lessons, cancelled/no-show lessons, and lessons with warnings.
+
+## 2. Data model
+
+The implementation uses three main entities: `Tutor`, `Lesson`, and `LessonEvent`.
+
+### Tutor
+
+Stores tutor information:
+
+| Field | Description |
+|---|---|
+| tutor_id | Primary key |
+| tutor_name | Tutor's name |
+| subject | Subject taught |
+| phone | Contact number |
+
+### Lesson
+
+Represents a student's booking with a tutor.
+
+| Field | Description |
+|---|---|
+| lesson_id | Primary key |
+| lesson_date | Scheduled date |
+| start_time | Starting time |
+| duration_min | Lesson duration in minutes |
+| student_name | Student's name |
+| tutor_id | Foreign key referencing Tutor |
+| room | Assigned room |
+| status | booked, cancelled, or no_show |
+| cancelled_at | Timestamp when the lesson was cancelled |
+| note | Additional information |
+
+The end time is derived from `start_time + duration_min` rather than stored separately. This avoids maintaining two values that could become inconsistent.
+
+### LessonEvent
+
+This table is implemented to stores the history of changes and notifications associated with a lesson. For newly created data, it will follow the logic listed in this part.
+
+| Field | Description |
+|---|---|
+| event_id | Primary key |
+| lesson_id | Foreign key referencing Lesson |
+| event_type | Type of event |
+| occurred_at | Timestamp of the event |
+| actor | Person or system responsible for the event |
+| previous_data | Previous lesson data, if applicable |
+| new_data | New lesson data, if applicable |
+| related_event_id | Optional reference to a related event |
+
+Supported event types include `CREATED`, `TUTOR_NOTIFIED`, `MOVED`, `CANCELLED`, and `NO_SHOW_MARKED`.
+
+### Representing cancellation and movement after tutor notification
+
+The `Lesson` record represents the current state of a booking, while `LessonEvent` preserves its change history.
+
+For example, when a lesson is moved after the tutor has already been notified:
+
+1. The existing `Lesson` record is updated with the new date, time, or room.
+2. A `MOVED` event is added to `LessonEvent`, recording the previous and new values.
+3. A new `TUTOR_NOTIFIED` event can record that the tutor was informed of the change.
+
+Similarly, when a booking is cancelled:
+
+1. The lesson's status becomes `cancelled`.
+2. `cancelled_at` records when the cancellation occurred.
+3. A `CANCELLED` event records the cancellation in the history.
+
+Previous event records are retained rather than overwritten. This allows the system to distinguish the current booking state from what happened previously.
+
+## 3. Database constraints vs. application-level rules
+
+I separated data integrity constraints from scheduling rules.
+
+### Database-enforced constraints
+
+The database enforces rules that should always hold for individual records and their relationships:
+
+| Rule | Implementation | Reason |
+|---|---|---|
+| Every lesson must reference an existing tutor | Foreign key constraint | Prevents lessons from referencing nonexistent tutors |
+| Lesson duration must be positive | CHECK constraint | Prevents invalid durations |
+| Lesson status must be valid | CHECK constraint | Restricts status to booked, cancelled, or no_show |
+| A cancelled lesson must have a cancellation timestamp | CHECK constraint | Keeps cancellation state consistent |
+| A non-cancelled lesson must not have a cancellation timestamp | CHECK constraint | Prevents inconsistent cancellation data |
+| Event types must be valid | CHECK constraint | Restricts event types to supported values |
+| Event records must reference an existing lesson | Foreign key constraint | Maintains event-to-lesson relationships |
+
+These constraints protect the stored data regardless of which application component writes to the database.
+
+### Application-level scheduling rules
+
+Scheduling rules involving multiple lessons are handled in application code.
+
+The daily schedule service calculates each lesson's start and end time, then compares overlapping time intervals.
+
+Two lessons overlap when:
+
+`first_start < second_end AND second_start < first_end`
+
+For overlapping lessons, the service checks whether they share:
+
+- The same tutor.
+- The same student.
+- The same room.
+
+Cancelled lessons are excluded from conflict detection because their slots are released. No-show lessons remain included because the scheduled time is still considered occupied.
+
+These checks are implemented in application code rather than database constraints because they involve comparing multiple records and their time intervals. They are also used to identify existing scheduling issues rather than reject or modify historical records.
+
+The current feature detects overlapping tutor, student, and room bookings. Rules such as the six-booking daily limit, closed-day authorization, and cancellation notice policy are not enforced by this read-only feature because it does not create or modify bookings.
+
+## 4. API Design
+
+The application uses FastAPI to expose the schedule data.
+
+### Daily schedule API
+
+**Endpoint:** `GET /api/schedule?date=YYYY-MM-DD`
+
+**Purpose:** Retrieve all lessons for a selected date.
+
+**Example request:**
+
+`GET /api/schedule?date=2026-03-10`
+
+**Example response:**
+
+```json
+{
+  "date": "2026-03-10",
+  "total_lessons": 2,
+  "lessons": [
+    {
+      "lesson_id": "L033",
+      "date": "2026-03-10",
+      "start_time": "09:00",
+      "end_time": "10:00",
+      "duration_min": 60,
+      "student_name": "Le Minh Chau",
+      "tutor_id": "T1",
+      "tutor_name": "Ngoc Anh",
+      "subject": "Maths",
+      "room": "R1",
+      "status": "booked",
+      "note": null,
+      "warnings": [
+        "Tutor conflict with L034"
+      ]
+    },
+    {
+      "lesson_id": "L034",
+      "date": "2026-03-10",
+      "start_time": "09:00",
+      "end_time": "10:00",
+      "duration_min": 60,
+      "student_name": "Tran Bao Long",
+      "tutor_id": "T1",
+      "tutor_name": "Ngoc Anh",
+      "subject": "Maths",
+      "room": "R2",
+      "status": "booked",
+      "note": null,
+      "warnings": [
+        "Tutor conflict with L033"
+      ]
+    }
+  ]
+}
+```
+
+The response contains the calculated end time and any scheduling warnings, so the frontend does not need to independently implement scheduling calculations.
+
+### Dashboard routes
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /` | Render the dashboard using 2026-03-04 by default |
+| `GET /dashboard` | Render the dashboard, optionally with a selected date |
+| `GET /dashboard/schedule?target_date=YYYY-MM-DD` | Return the schedule HTML fragment when the selected date changes |
+
+The dashboard uses Jinja2 for server-side rendering, Bootstrap 5 for styling, and HTMX to update the schedule content when the date picker changes.
+
+### Rejected endpoint
+
+I considered implementing:
+
+`POST /api/lessons`
+
+This endpoint would create a new booking and require request validation for tutor availability, student availability, room availability, daily workload limits, and closed-day rules.
+
+I rejected it because booking management is outside the scope of the selected Daily Schedule View feature. Implementing it would introduce additional write operations and validation workflows that are not necessary to deliver the read-only dashboard.
+
+## 5. Implementation and Observations
+
+### Technology stack
+
+| Component | Technology |
+|---|---|
+| Backend framework | FastAPI |
+| Database | SQLite |
+| ORM | SQLAlchemy |
+| Frontend templates | Jinja2 |
+| UI framework | Bootstrap 5 |
+| Dynamic page updates | HTMX |
+
+The implementation separates database models, repositories, services, and API routes:
+
+- **Models:** Define the database entities and relationships.
+- **Repositories:** Retrieve lessons and their associated tutors.
+- **Services:** Calculate lesson end times and identify scheduling conflicts.
+- **API routes:** Expose schedule data as JSON.
+- **Templates:** Render the dashboard and its schedule content.
+
+### Observed results
+
+The application was tested using the imported seed data.
+
+For March 04, 2026, the dashboard displayed six lessons in chronological order.
+
+The application correctly identified the overlapping bookings between L007 and L008: Both lessons were assigned to the same student (Le Minh Chau)
+
+Both lessons were displayed with student conflict warnings.
+
+For L009 and L010, the dashboard also noted that these students are part of an exam pair with half price, based on the note column of the seed data.
+
+The date picker was also tested to verify that changing the selected date updated the schedule content without reloading the entire page.
+
+The implementation therefore demonstrates the selected feature using the existing dataset while preserving the distinction between current booking information and historical events.
